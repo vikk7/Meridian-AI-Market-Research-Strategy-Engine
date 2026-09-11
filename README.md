@@ -511,8 +511,8 @@ The app will be live at `http://localhost:5173`.
 
 <img src="https://img.shields.io/badge/frontend-live-2e7d32?style=for-the-badge&labelColor=1a1a1a" />
 
-**App:** [meridian-frontend-fawn.vercel.app](https://meridian-frontend-fawn.vercel.app)
-**Source:** [github.com/aryanroy666/Meridian-AI-Market-Research-Strategy-Engine](https://github.com/aryanroy666/Meridian-AI-Market-Research-Strategy-Engine)
+**App:** [meridian-frontend-fawn.vercel.app](https://meridian-research-engine-fe.vercel.app)
+**Source:** [github.com/aryanroy666/Meridian-AI-Market-Research-Strategy-Engine](https://github.com/vikk7/Meridian-AI-Market-Research-Strategy-Engine)
 
 </div>
 
