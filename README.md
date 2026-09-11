@@ -1,5 +1,9 @@
 <div align="center">
 
+<p align="center">
+  <img src="frontend/public/Meridian Logo.png" alt="Meridian Logo" width="100">
+</p>
+
 # Meridian - AI Market Research & Strategy Engine
 
 ### An autonomous multi-agent system that turns a research brief into a fully cited, consulting-grade market report
@@ -21,13 +25,15 @@
 
 <br/>
 
-> A signed-in user submits a research brief. Seven specialized AI agents plan, search the live web, extract evidence, validate it, and write a polished report — every finding traceable back to its original source.
+> A signed-in user submits a research brief. Seven specialized AI agents plan, search the live web, extract evidence, validate it, and write a polished report. Every finding traceable back to its original source.
 
 <br/>
 
 ## Table of Contents
 
 - [What This Project Is](#what-this-project-is)
+- [Business Problem](#business-problem)
+- [Product Goal](#product-goal)
 - [Highlights](#highlights)
 - [System Architecture](#system-architecture)
 - [The Multi-Agent Research Pipeline](#the-multi-agent-research-pipeline)
@@ -36,14 +42,21 @@
 - [End-to-End User Flow](#end-to-end-user-flow)
 - [Tech Stack](#tech-stack)
 - [Getting the Project Running Locally](#getting-the-project-running-locally)
+- [Live Demo](#live-demo)
 - [Security Notes](#security-notes)
+- [Evaluation & Reliability](#evaluation--reliability)
+- [Known Limitations](#known-limitations)
+- [Performance Metrics](#performance-metrics)
+- [Future Improvements](#future-improvements)
+- [Team Contributions](#team-contributions)
+- [Screenshots](#screenshots)
 - [Project Status](#project-status)
 
 <br/>
 
 ## What This Project Is
 
-This project is an AI-powered market research analyst. A signed-in user submits a research brief — for example *"Analyze the competitive landscape of the EV battery market in Southeast Asia"* — and behind the scenes a pipeline of seven specialized AI agents works in sequence to:
+This project is an AI-powered market research analyst. A signed-in user submits a research brief, for example *"Analyze the competitive landscape of the EV battery market in Southeast Asia"*, and behind the scenes a pipeline of seven specialized AI agents works in sequence to:
 
 | Step | What happens |
 |:---:|---|
@@ -54,7 +67,26 @@ This project is an AI-powered market research analyst. A signed-in user submits 
 | 5 | Turn validated evidence into a polished, structured report |
 | 6 | Attach every claim in the report back to its original citation |
 
-The result is served through a McKinsey-styled web dashboard, where the user watches the pipeline run in real time and then reads the final report through a **Report / Evidence / Sources** tabbed view — every key finding traceable back to a live web source.
+The result is served through a McKinsey-styled web dashboard, where the user watches the pipeline run in real time and then reads the final report through a **Report / Evidence / Sources** tabbed view. Every key finding traceable back to a live web source.
+
+<br/>
+
+## Business Problem
+
+Market and competitive research is normally slow and manual: an analyst spends hours searching the web, reading sources, extracting claims, and cross-checking them before a single report can be written and that report is only as trustworthy as the diligence behind it. LLMs can write the report in seconds, but a report with no traceable sourcing isn't something a business can act on.
+
+Meridian exists to close that gap. The goal isn't just a faster report, but one where every claim is traceable back to a source, the way an analyst's would be.
+
+<br/>
+
+## Product Goal
+
+Meridian's goal is to make an AI-generated market report something a decision-maker can actually rely on. Concretely, that means:
+
+- **Automate the research grunt work** — planning, searching, extracting, and cross-checking evidence without automating away the trust that comes from citations.
+- **Keep every finding traceable** — a user can click from any key finding in the report down to the exact evidence and source that backs it.
+- **Make the wait transparent** — instead of a spinner, the user watches which of the seven pipeline stages is currently running.
+- **Ship it as a real product**, not a notebook demo — real authentication, per-user data isolation, and a deployed frontend and backend.
 
 <br/>
 
@@ -87,6 +119,7 @@ Every key finding in the final report links back to the exact evidence and web s
 </table>
 
 <br/>
+
 
 ## System Architecture
 
@@ -189,9 +222,9 @@ sequenceDiagram
 | **4. Validation** | `ai/validation/validation_agent.py` | Cross-checks each piece of evidence against its source and assigns a confidence verdict. |
 | **5. Citation Building** | `ai/report/citation_builder.py` | Converts raw sources into properly formatted citation objects. |
 | **6. Report Generation** | `ai/report/report_agent.py` | Synthesizes validated evidence into a structured `Report` (title, executive summary, key findings). |
-| **7. Report Linking** | `ai/report/report_linker.py` | Rewrites the report so every key finding links to its supporting evidence and citation — powers the Evidence / Sources tabs. |
+| **7. Report Linking** | `ai/report/report_linker.py` | Rewrites the report so every key finding links to its supporting evidence and citation. Powers the Evidence / Sources tabs. |
 
-> **Fail-fast by design.** If any stage returns an empty result (no tasks, no sources, no evidence...), the pipeline raises immediately instead of silently producing a hollow report, and the job is marked `failed`.
+> **Fail-fast, with retries.** Each stage retries automatically on transient failures (e.g. a flaky search call or LLM timeout) before giving up. If a stage still returns an empty result after retrying (no tasks, no sources, no evidence...), the pipeline raises immediately instead of silently producing a hollow report, and the job is marked `failed`.
 
 **LLM & search providers**
 - **Gemini** (`google-genai`) — the reasoning engine behind the Planner, Extraction, Validation, and Report agents (`ai/llm/gemini.py`).
@@ -219,8 +252,7 @@ backend/
 ├── api/
 │   ├── research.py             # Create + inspect research jobs (the core workflow)
 │   ├── reports.py              # Fetch generated reports
-│   ├── evidence.py              # Fetch raw evidence records
-│   └── feedback.py               # Reviewer feedback on reports
+│   └── evidence.py              # Fetch raw evidence records
 ├── repositories/                # One repository per table — all Supabase reads/writes
 ├── services/
 │   └── research_service.py       # Bridges the API layer to the AI pipeline
@@ -238,7 +270,7 @@ Every protected route depends on `get_current_user` (`backend/core/auth.py`):
 1. The frontend sends the Supabase session's access token as a `Bearer` token in the `Authorization` header.
 2. The backend calls `supabase.auth.get_user(token)` to verify the token server-side against Supabase.
 3. If valid, the authenticated `user` object is injected into the route; if not, a `401` is raised.
-4. On job-scoped routes (`/api/research/{job_id}/...`), an additional `_ensure_owner` check confirms the requesting user actually created that job — returning `403` otherwise.
+4. On job-scoped routes (`/api/research/{job_id}/...`), an additional `_ensure_owner` check confirms the requesting user actually created that job, returning `403` otherwise.
 
 > No research job or report is ever visible to a user who didn't create it, even if they know the job's UUID.
 
@@ -270,10 +302,9 @@ Nine ordered migrations build the schema incrementally:
 | 005 | Validation Records | `validation_records` |
 | 006 | Memory | `memory_records` — `pgvector` column for future semantic search |
 | 007 | Reports | `reports` |
-| 008 | Feedback | `feedback` |
-| 009 | Indexes | Indexes on `evidence.job_id`, `planner_tasks.job_id`, and an `ivfflat` vector index on `memory_records.embedding` |
+| 008 | Indexes | Indexes on `evidence.job_id`, `planner_tasks.job_id`, and an `ivfflat` vector index on `memory_records.embedding` |
 
-`research_jobs.created_by` and `feedback.reviewer_id` both reference `auth.users(id)`, tying every record directly to a Supabase Auth identity — this is what makes per-user data isolation possible.
+`research_jobs.created_by` reference `auth.users(id)`, tying every record directly to a Supabase Auth identity. This is what makes per-user data isolation possible.
 
 ### Backend Environment Variables
 
@@ -346,7 +377,7 @@ The UI follows a navy-and-gold "Meridian" consulting brand intended to evoke a M
 | Concern | Library |
 |---|---|
 | Styling | Tailwind CSS v4 |
-| Animation | Framer Motion — used heavily on the live `ResearchProgress` screen |
+| Animation | Framer Motion - used heavily on the live `ResearchProgress` screen |
 | Icons | Lucide React, React Icons, FontAwesome |
 
 ### Frontend Environment Variables
@@ -474,14 +505,117 @@ The app will be live at `http://localhost:5173`.
 
 <br/>
 
+## Live Demo
+
+<div align="center">
+
+<img src="https://img.shields.io/badge/frontend-live-2e7d32?style=for-the-badge&labelColor=1a1a1a" />
+
+**App:** [meridian-frontend-fawn.vercel.app](https://meridian-frontend-fawn.vercel.app)
+**Source:** [github.com/aryanroy666/Meridian-AI-Market-Research-Strategy-Engine](https://github.com/aryanroy666/Meridian-AI-Market-Research-Strategy-Engine)
+
+</div>
+
+> Sign up with your email to try it. A live run submits a real brief through the full seven-stage pipeline, so expect it to take a minute or two rather than return instantly.
+
+<br/>
+
 ## Security Notes
 
 | Safeguard | Description |
 |---|---|
 | **Two-tier Supabase keys** | The anon/public key (safe for the browser) is used by the frontend for auth only; the service-role key (full database access) is confined to the backend and never exposed client-side. |
-| **Server-verified sessions** | The backend never trusts client-supplied identity — every bearer token is independently verified against Supabase on every call. |
+| **Server-verified sessions** | The backend never trusts client-supplied identity. Every bearer token is independently verified against Supabase on every call. |
 | **Per-user data isolation** | Job ownership is enforced at the API layer (`_ensure_owner`), so users can only ever read their own jobs, tasks, sources, evidence, validations, and reports. |
 | **Restricted CORS** | `CORS_ORIGINS` explicitly allowlists origins rather than leaving the API open, so only approved frontend domains may call it. |
+
+<br/>
+
+## Evaluation & Reliability
+
+Reliability is built into the pipeline itself rather than checked afterward:
+
+| Mechanism | How it works |
+|---|---|
+| **Dedicated validation stage** | Before anything reaches the report, the Validation agent (`ai/validation/validation_agent.py`) cross-checks every extracted piece of evidence against its source and assigns it a confidence verdict. The evidence isn't trusted just because it was extracted. |
+| **Citation-backed findings** | The Report Linker (`ai/report/report_linker.py`) rewrites the report so every key finding links back to the exact evidence and source behind it. This is what powers the Report / Evidence / Sources tabs, and it means a finding with no traceable source can't silently make it into the final report. |
+| **Fail-fast on weak results** | If a stage comes back empty even after its retries (no tasks, no sources, no evidence), the pipeline stops and marks the job `failed` instead of letting a thin or unsupported report through. |
+| **Server-verified auth on every request** | Every bearer token is independently re-verified against Supabase on each call, so job ownership and access checks can't be spoofed client-side. |
+
+> Today this reliability is structural, enforced by the pipeline's own stages, rather than measured by a separate offline eval suite. Adding automated report-level scoring (citation coverage, hallucination spot-checks) is tracked under [Future Improvements](#future-improvements).
+
+<br/>
+
+## Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| **Synchronous pipeline** | `POST /api/research/` runs all seven stages inline and only responds once the job is complete. There's no streaming or webhook callback, so the frontend's live progress view is a client-side animation timed to the expected stages rather than a true server-pushed status feed. |
+| **Single LLM provider** | The Planner, Extraction, Validation, and Report agents all depend on Gemini with no fallback provider. A Gemini outage stalls every new research job. |
+| **Semantic recall unused** | The `pgvector`-backed `memory_records` table exists in the schema but isn't yet read from or written to by the pipeline. There's no cross-job memory or recall today. |
+
+<br/>
+
+## Performance Metrics
+
+End-to-end run time depends on the seven-stage pipeline's calls to Gemini and Tavily, so it varies with upstream API load rather than being fixed:
+
+| Scenario | Runtime |
+|---|:---:|
+| Best Case | 45secs – 55secs |
+| Typical Case | 1min – 1min 30secs |
+| Worst Case (heavy Gemini traffic) | 1min 30secs – 2min 30secs |
+
+<br/>
+
+## Future Improvements
+
+| Idea | Why it'd help |
+|---|---|
+| **Streamed pipeline status** | Replace the client-timed progress animation with real server-pushed stage updates (WebSocket or SSE), so the UI reflects what the backend is actually doing at that moment. |
+| **Multi-provider LLM fallback** | Fall back to a second LLM provider if Gemini is unavailable or rate-limited, instead of stalling new jobs. |
+| **Activate semantic memory** | Start writing to `memory_records` so related past research (e.g. a previously researched market) can inform a new brief instead of starting from zero each time. |
+| **Exportable reports** | Let a user download a completed report as PDF or share a read-only link, rather than only viewing it in-app. |
+| **Automated report evaluation** | A lightweight eval pass (e.g. citation-coverage checks, hallucination spot-checks) run against every generated report before it's marked complete. |
+
+<br/>
+
+## Team Contributions
+
+<div align="center">
+
+| Member | Role |
+|---|---|
+| **Aryan Roy** (GR) | Frontend & UX/UI |
+| **Deepak Chauhan** | Auth & API communication |
+| **Vikram Kumar R.** | Backend & API Layer |
+| **Prajwal Girade** | AI agents 1-3 (Planning Agent, Research Agent, Extraction Agent) |
+| **Priyanshu Singh** | AI agents 4-5 (Validation Agent, Citation Agent) |
+| **Aditya Tyagi** | AI agents 6-7 (Report Agent, Linker Agent) |
+| **Shashank Meshram** | Database & Persistence |
+
+All contributors were involved across development, testing, documentation, and refinement throughout the project.
+
+</div>
+
+<br/>
+
+## Screenshots
+
+### Dashboard & Dark Mode
+A consulting-grade workspace with a navy-and-gold dark theme built for long research sessions.
+
+<img src="screenshots/Dark Mode.png" alt="Meridian Dashboard and Dark Mode" width="700">
+
+### Research Progress
+Seven specialized AI agents plan, search, extract, validate, cite, and report in real time.
+
+<img src="screenshots/Research Progress.png" alt="Meridian Research Progress" width="700">
+
+### Report View
+Every finding is backed by evidence, every claim is cited, and every source carries a transparent confidence score.
+
+<img src="screenshots/Report Findings.png" alt="Meridian Report View" width="700">
 
 <br/>
 
